@@ -101,6 +101,16 @@ export const AuthProvider = ({ children }) => {
         return;
       }
 
+      // Paint the shell immediately; `get_my_access` can take several seconds on cold RPC/network.
+      setUser(session.user);
+      setIsAuthenticated(true);
+      setAuthError(null);
+      setInstitutionUser(null);
+      setInstitution(null);
+      setLicenses([]);
+      setIsLoadingPublicSettings(false);
+      setIsLoadingAuth(false);
+
       await hydrateAccess(session.user);
     } catch (error) {
       const normalized = normalizeError(error, 'An unexpected error occurred');
@@ -132,11 +142,8 @@ export const AuthProvider = ({ children }) => {
         return;
       }
 
-      setIsLoadingAuth(true);
-
       if (!session?.user) {
         applyAuthRequired();
-        setIsLoadingAuth(false);
         return;
       }
 
@@ -153,8 +160,6 @@ export const AuthProvider = ({ children }) => {
           });
           setIsAuthenticated(false);
         }
-      } finally {
-        setIsLoadingAuth(false);
       }
     });
 
