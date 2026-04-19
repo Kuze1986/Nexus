@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { base44 } from '@/api/base44Client';
+import { supabase } from '@/api/supabaseClient';
 import { CheckCircle2, Building2, TrendingUp, Handshake } from 'lucide-react';
 
 const inquiryTypes = [
@@ -39,7 +39,8 @@ export default function ContactSection() {
     email: '',
     organization: '',
     role: '',
-    message: ''
+    message: '',
+    product_interest: [],
   });
 
   const handleTypeSelect = (type) => {
@@ -51,20 +52,47 @@ export default function ContactSection() {
     }));
   };
 
+  const openMailtoFallback = () => {
+    const subject = encodeURIComponent('NEXUS demo / partnership inquiry');
+    const body = encodeURIComponent(
+      [
+        `Name: ${formData.name}`,
+        `Email: ${formData.email}`,
+        `Organization: ${formData.organization}`,
+        `Role: ${formData.role}`,
+        `Product interest: ${(formData.product_interest || []).join(', ') || '—'}`,
+        '',
+        formData.message || '',
+      ].join('\n')
+    );
+    window.location.href = `mailto:?subject=${subject}&body=${body}`;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    
+
+    const payload = {
+      name: formData.name,
+      email: formData.email,
+      organization: formData.organization,
+      role: formData.role,
+      message: formData.message || null,
+      product_interest: formData.product_interest || [],
+      submitted_at: new Date().toISOString(),
+      status: 'new',
+    };
+
     try {
-      await base44.entities.DemoRequest.create({
-        ...formData,
-        product_interest: formData.product_interest || [],
-        submitted_at: new Date().toISOString(),
-        status: 'new'
-      });
+      const { error } = await supabase.schema('nexus').from('demo_requests').insert(payload);
+      if (error) {
+        openMailtoFallback();
+      }
       setSubmitted(true);
     } catch (error) {
       console.error('Error submitting demo request:', error);
+      openMailtoFallback();
+      setSubmitted(true);
     } finally {
       setLoading(false);
     }

@@ -1,15 +1,7 @@
 import React from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
 
 export default function AboutSection() {
-  const { data: teamMembers = [] } = useQuery({
-    queryKey: ['team-members'],
-    queryFn: async () => {
-      const members = await base44.entities.TeamMember.list('order_index');
-      return members.filter(m => m.is_visible);
-    }
-  });
+  const teamMembers = [];
 
   return (
     <section id="about" className="min-h-screen bg-gradient-to-b from-[#080C14] to-[#0a0f1a] py-24 px-6">
@@ -19,7 +11,7 @@ export default function AboutSection() {
             About NEXUS Holdings
           </h2>
         </div>
-        
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-20">
           <div className="space-y-6">
             <p className="text-xl text-gray-300 leading-relaxed">
@@ -29,19 +21,19 @@ export default function AboutSection() {
               We're building infrastructure that learns human behavior patterns and adjusts in real-time — across health, education, connection, and personal growth.
             </p>
           </div>
-          
+
           <div>
             {teamMembers.length > 0 ? (
               <div className="space-y-6">
                 {teamMembers.map((member) => (
-                  <div 
+                  <div
                     key={member.id}
                     className="p-6 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10"
                   >
                     <div className="flex items-start gap-4">
                       {member.avatar_url && (
-                        <img 
-                          src={member.avatar_url} 
+                        <img
+                          src={member.avatar_url}
                           alt={member.name}
                           className="w-16 h-16 rounded-full object-cover"
                         />
@@ -65,7 +57,7 @@ export default function AboutSection() {
             )}
           </div>
         </div>
-        
+
         <div className="text-center p-8 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10">
           <p className="text-xl text-gray-300 leading-relaxed">
             NEXUS Holdings is a Pittsburgh-based holding company operating at the intersection of behavioral intelligence, health technology, education, and human connection.

@@ -1,17 +1,9 @@
 import React from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
 import ProductCard from './ProductCard';
-import { Loader2 } from 'lucide-react';
 
-export default function PortfolioSection({ onProductClick }) {
-  const { data: products = [], isLoading } = useQuery({
-    queryKey: ['portfolio-products'],
-    queryFn: () => base44.entities.PortfolioProduct.list('order_index')
-  });
-
-  const featuredProducts = products.filter(p => p.is_featured);
-  const otherProducts = products.filter(p => !p.is_featured);
+export default function PortfolioSection({ products = [], onProductClick }) {
+  const featuredProducts = products.filter((p) => p.is_featured);
+  const otherProducts = products.filter((p) => !p.is_featured);
   const sortedProducts = [...featuredProducts, ...otherProducts];
 
   return (
@@ -25,22 +17,16 @@ export default function PortfolioSection({ onProductClick }) {
             Built for the full spectrum of human experience.
           </p>
         </div>
-        
-        {isLoading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-8 h-8 text-white animate-spin" />
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {sortedProducts.map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                onClick={() => onProductClick(product)}
-              />
-            ))}
-          </div>
-        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {sortedProducts.map((product) => (
+            <ProductCard
+              key={product.id}
+              product={product}
+              onClick={() => onProductClick(product)}
+            />
+          ))}
+        </div>
       </div>
     </section>
   );
