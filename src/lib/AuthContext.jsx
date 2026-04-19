@@ -34,12 +34,30 @@ export const AuthProvider = ({ children }) => {
   const hydrateAccess = useCallback(async (sessionUser) => {
     const { data, error } = await supabase.schema('nexus').rpc('get_my_access');
     if (error) {
-      throw normalizeError(error, 'Failed to load access context');
+      const normalized = normalizeError(error, 'Failed to load access context');
+      const status = Number(normalized.status);
+      if (status === 401 || status === 403) {
+        throw normalized;
+      }
+      // RPC missing, RLS, or schema drift — still allow the session so the app can load
+      setUser(sessionUser ?? null);
+      setInstitutionUser(null);
+      setInstitution(null);
+      setLicenses([]);
+      setIsAuthenticated(true);
+      setAuthError(null);
+      return;
     }
 
     const access = Array.isArray(data) ? data[0] : data;
     if (!access) {
-      throw normalizeError(null, 'Access context unavailable', 403);
+      setUser(sessionUser ?? null);
+      setInstitutionUser(null);
+      setInstitution(null);
+      setLicenses([]);
+      setIsAuthenticated(true);
+      setAuthError(null);
+      return;
     }
 
     setUser(access.user ?? sessionUser ?? null);
@@ -90,7 +108,13 @@ export const AuthProvider = ({ children }) => {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      // Avoid racing duplicate `get_my_access` with `checkAppState()` on first paint;
+      // that pair of concurrent calls can leave `isLoadingAuth` stuck or hang the UI.
+      if (event === 'INITIAL_SESSION') {
+        return;
+      }
+
       setIsLoadingAuth(true);
 
       if (!session?.user) {
