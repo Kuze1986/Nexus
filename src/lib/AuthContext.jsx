@@ -32,7 +32,24 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const hydrateAccess = useCallback(async (sessionUser) => {
-    const { data, error } = await supabase.schema('nexus').rpc('get_my_access');
+    const rpc = supabase.schema('nexus').rpc('get_my_access');
+    const timeoutMs = 20000;
+    const timeout = new Promise((_, reject) => {
+      setTimeout(() => {
+        reject(normalizeError(null, `get_my_access timed out after ${timeoutMs}ms`, 408));
+      }, timeoutMs);
+    });
+
+    let data;
+    let error;
+    try {
+      const result = await Promise.race([rpc, timeout]);
+      ({ data, error } = result);
+    } catch (timeoutOrRaceError) {
+      error = timeoutOrRaceError;
+      data = null;
+    }
+
     if (error) {
       const normalized = normalizeError(error, 'Failed to load access context');
       const status = Number(normalized.status);
