@@ -187,6 +187,10 @@ export const nexusClient = {
     },
   },
   entities: entitiesProxy,
+  // Legacy Base44 SDK surface — NavigationTracker and similar code expect this.
+  appLogs: {
+    async logUserInApp() {},
+  },
 };
 
 export { supabase, normalizeError };
