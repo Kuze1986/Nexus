@@ -1,0 +1,17 @@
+{
+  "name": "NEXUS",
+  "short_name": "NEXUS",
+  "description": "NEXUS institution portal",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#080C14",
+  "theme_color": "#080C14",
+  "icons": [
+    {
+      "src": "https://base44.com/logo_v2.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any"
+    }
+  ]
+}
