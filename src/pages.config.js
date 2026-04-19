@@ -48,7 +48,7 @@
  * The mainPage value must match a key in the PAGES object exactly.
  */
 import Home from './pages/Home';
-import AdminLogin from './pages/AdminLogin';
+import Login from './pages/Login';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminPortfolio from './pages/AdminPortfolio';
 import AdminPress from './pages/AdminPress';
@@ -58,7 +58,7 @@ import AdminTeam from './pages/AdminTeam';
 
 export const PAGES = {
     "Home": Home,
-    "AdminLogin": AdminLogin,
+    "login": Login,
     "AdminDashboard": AdminDashboard,
     "AdminPortfolio": AdminPortfolio,
     "AdminPress": AdminPress,

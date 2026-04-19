@@ -170,14 +170,8 @@ export const nexusClient = {
     },
 
     redirectToLogin(returnUrl) {
-      const authUrl = import.meta.env.VITE_NEXUS_AUTH_URL;
-      if (!authUrl) {
-        throw normalizeError(null, 'Missing VITE_NEXUS_AUTH_URL', 500);
-      }
-
       const redirectTo = encodeURIComponent(resolveRedirectTarget(returnUrl) ?? '');
-      const separator = authUrl.includes('?') ? '&' : '?';
-      navigateTo(`${authUrl}${separator}redirect_to=${redirectTo}`);
+      navigateTo(`/login?redirect_to=${redirectTo}`);
     },
 
     async signIn(email, password) {

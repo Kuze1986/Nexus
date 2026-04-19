@@ -3,21 +3,39 @@ import { useNavigate, Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Button } from '@/components/ui/button';
 import { LogOut, LayoutDashboard, Package, Newspaper, HelpCircle, Users } from 'lucide-react';
+import { useNexusAuth } from '@/hooks/useNexusAuth';
+import { supabase } from '@/api/supabaseClient';
 
 export default function AdminLayout({ children, activePage }) {
   const navigate = useNavigate();
+  const { isLoadingAuth, isAuthenticated, isAdmin, isSuperAdmin } = useNexusAuth();
 
   useEffect(() => {
-    const adminId = sessionStorage.getItem('nexus_admin');
-    if (!adminId) {
-      navigate(createPageUrl('AdminLogin'));
+    if (isLoadingAuth) {
+      return;
     }
-  }, [navigate]);
+    if (!isAuthenticated) {
+      const returnUrl = encodeURIComponent(window.location.href);
+      navigate(`${createPageUrl('login')}?redirect_to=${returnUrl}`);
+      return;
+    }
+    if (!isAdmin && !isSuperAdmin) {
+      navigate(createPageUrl('Home'));
+    }
+  }, [isAdmin, isAuthenticated, isLoadingAuth, isSuperAdmin, navigate]);
 
-  const handleLogout = () => {
-    sessionStorage.removeItem('nexus_admin');
-    navigate(createPageUrl('AdminLogin'));
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate(createPageUrl('login'));
   };
+
+  if (isLoadingAuth || !isAuthenticated || (!isAdmin && !isSuperAdmin)) {
+    return (
+      <div className="min-h-screen bg-[#080C14] flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-white/20 border-t-white rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   const navItems = [
     { label: 'Demo Requests', icon: LayoutDashboard, page: 'AdminDashboard' },

@@ -15,14 +15,8 @@ export const AuthProvider = ({ children }) => {
   const [appPublicSettings, setAppPublicSettings] = useState(null);
 
   const navigateToLogin = useCallback(() => {
-    const authUrl = import.meta.env.VITE_NEXUS_AUTH_URL;
-    if (!authUrl) {
-      return;
-    }
-
     const redirectTo = encodeURIComponent(window.location.href);
-    const separator = authUrl.includes('?') ? '&' : '?';
-    window.location.assign(`${authUrl}${separator}redirect_to=${redirectTo}`);
+    window.location.assign(`/login?redirect_to=${redirectTo}`);
   }, []);
 
   const applyAuthRequired = useCallback(() => {
@@ -137,10 +131,7 @@ export const AuthProvider = ({ children }) => {
     applyAuthRequired();
 
     if (shouldRedirect) {
-      const authUrl = import.meta.env.VITE_NEXUS_AUTH_URL;
-      if (authUrl) {
-        window.location.assign(authUrl);
-      }
+      window.location.assign('/login');
     }
   };
 
