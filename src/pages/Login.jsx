@@ -3,14 +3,16 @@ import { supabase, isConfigured } from '@/api/supabaseClient';
 import { getRedirectTarget, redirectTo } from '@/lib/redirect';
 
 export default function Login() {
-  const [email, setEmail] = useState('');
+  const [email, setEmail]     = useState('');
   const [password, setPassword] = useState('');
-  const [mode, setMode] = useState('password'); // 'password' | 'magic'
+  const [mode, setMode]       = useState('password'); // 'password' | 'magic'
   const [isLoading, setIsLoading] = useState(false);
   const [isCheckingSession, setIsCheckingSession] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError]     = useState('');
   const [magicSent, setMagicSent] = useState(false);
 
+  // target is null when no redirect_to param AND no VITE_DEFAULT_APP_URL —
+  // we just show the login form instead of redirecting to ourselves.
   const target = useMemo(() => getRedirectTarget(), []);
 
   useEffect(() => {
@@ -21,24 +23,31 @@ export default function Login() {
 
     let mounted = true;
 
+    // Check whether the user already has a valid session.
     supabase.auth.getSession().then(({ data, error: sessionError }) => {
       if (!mounted) return;
       if (!sessionError && data?.session) {
-        redirectTo(target);
-        return;
+        if (target) {
+          redirectTo(target);
+          return; // keep spinner while navigating away
+        }
+        // No safe redirect target — already logged in, show a message instead of looping.
       }
       setIsCheckingSession(false);
     });
 
-    // Handle magic link callback (email OTP token in URL hash)
-    supabase.auth.onAuthStateChange((event, session) => {
+    // Handle magic-link OTP callback arriving via the URL hash.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return;
-      if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session) {
+      if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session && target) {
         redirectTo(target);
       }
     });
 
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+      subscription.unsubscribe(); // ← was missing; caused duplicate subscriptions
+    };
   }, [target]);
 
   const handleSubmit = async (e) => {
@@ -51,14 +60,20 @@ export default function Login() {
       if (mode === 'magic') {
         const { error: otpError } = await supabase.auth.signInWithOtp({
           email,
-          options: { emailRedirectTo: target },
+          options: { emailRedirectTo: target ?? window.location.origin },
         });
         if (otpError) throw otpError;
         setMagicSent(true);
       } else {
         const { error: pwError } = await supabase.auth.signInWithPassword({ email, password });
         if (pwError) throw pwError;
-        redirectTo(target);
+        if (target) {
+          redirectTo(target);
+        } else {
+          // Signed in but nowhere to go — show a success state
+          setMagicSent(true); // re-use the "check your email" slot with a different message
+          setError('');
+        }
       }
     } catch (err) {
       setError(err?.message ?? 'Authentication failed');
@@ -67,13 +82,17 @@ export default function Login() {
     }
   };
 
+  // ── Error states ─────────────────────────────────────────────────────────
+
   if (!isConfigured) {
     return (
       <main className="min-h-screen bg-[#080C14] flex items-center justify-center px-6">
         <div className="max-w-md w-full rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
           <p className="text-red-300 text-sm">
-            Supabase is not configured. Set <code className="text-white">VITE_SUPABASE_URL</code> and{' '}
-            <code className="text-white">VITE_SUPABASE_ANON_KEY</code> in Railway and redeploy.
+            Supabase is not configured. Set{' '}
+            <code className="text-white">VITE_SUPABASE_URL</code> and{' '}
+            <code className="text-white">VITE_SUPABASE_ANON_KEY</code> in Railway
+            and redeploy.
           </p>
         </div>
       </main>
@@ -87,6 +106,8 @@ export default function Login() {
       </main>
     );
   }
+
+  // ── Login form ────────────────────────────────────────────────────────────
 
   return (
     <main className="min-h-screen bg-[#080C14] text-white flex items-center justify-center px-6">
@@ -129,7 +150,7 @@ export default function Login() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  required
+                  required={mode === 'password'}
                   autoComplete="current-password"
                   placeholder="••••••••"
                   className="w-full rounded-lg bg-white/10 border border-white/20 px-3.5 py-2.5 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-sm"
@@ -145,7 +166,9 @@ export default function Login() {
 
             {magicSent && (
               <div className="p-3 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-sm">
-                Magic link sent — check your email to continue.
+                {mode === 'magic'
+                  ? 'Magic link sent — check your email to continue.'
+                  : 'Signed in successfully.'}
               </div>
             )}
 
@@ -154,18 +177,14 @@ export default function Login() {
               disabled={isLoading}
               className="w-full rounded-lg bg-white text-[#080C14] font-semibold py-2.5 text-sm hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {isLoading
-                ? 'Please wait…'
-                : mode === 'magic'
-                  ? 'Send magic link'
-                  : 'Sign in'}
+              {isLoading ? 'Please wait…' : mode === 'magic' ? 'Send magic link' : 'Sign in'}
             </button>
           </form>
 
           <div className="text-center">
             <button
               type="button"
-              onClick={() => { setMode(mode === 'magic' ? 'password' : 'magic'); setError(''); setMagicSent(false); }}
+              onClick={() => { setMode(m => m === 'magic' ? 'password' : 'magic'); setError(''); setMagicSent(false); }}
               className="text-xs text-slate-400 hover:text-white transition-colors"
             >
               {mode === 'magic' ? 'Use password instead' : 'Use magic link instead'}
@@ -173,9 +192,7 @@ export default function Login() {
           </div>
         </div>
 
-        <p className="text-center text-xs text-slate-600 mt-8">
-          BioLoop Holdings — Confidential
-        </p>
+        <p className="text-center text-xs text-slate-600 mt-8">BioLoop Holdings — Confidential</p>
       </section>
     </main>
   );
