@@ -45,3 +45,27 @@ function getFallback() {
 export function redirectTo(target) {
   window.location.assign(target);
 }
+
+/**
+ * Redirect to `target` on a different origin, carrying the Supabase session
+ * tokens in the URL hash. The receiving app's Supabase client will detect the
+ * hash via detectSessionInUrl and establish the session automatically.
+ *
+ * Falls back to a plain redirect when no session is available.
+ */
+export function redirectWithSession(target, session) {
+  if (!session?.access_token) {
+    window.location.assign(target);
+    return;
+  }
+  const url = new URL(target);
+  // Overwrite any existing hash — never carry stale tokens forward.
+  url.hash = [
+    `access_token=${session.access_token}`,
+    `refresh_token=${session.refresh_token ?? ''}`,
+    `expires_in=${session.expires_in ?? 3600}`,
+    `token_type=${session.token_type ?? 'bearer'}`,
+    `type=magiclink`,
+  ].join('&');
+  window.location.assign(url.toString());
+}

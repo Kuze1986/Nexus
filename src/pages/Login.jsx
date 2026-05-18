@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase, isConfigured } from '@/api/supabaseClient';
-import { getRedirectTarget, redirectTo } from '@/lib/redirect';
+import { getRedirectTarget, redirectWithSession } from '@/lib/redirect';
 
 export default function Login() {
   const [email, setEmail]     = useState('');
@@ -28,7 +28,7 @@ export default function Login() {
       if (!mounted) return;
       if (!sessionError && data?.session) {
         if (target) {
-          redirectTo(target);
+          redirectWithSession(target, data.session);
           return; // keep spinner while navigating away
         }
         // No safe redirect target — already logged in, show a message instead of looping.
@@ -40,7 +40,7 @@ export default function Login() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return;
       if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session && target) {
-        redirectTo(target);
+        redirectWithSession(target, session);
       }
     });
 
@@ -65,10 +65,10 @@ export default function Login() {
         if (otpError) throw otpError;
         setMagicSent(true);
       } else {
-        const { error: pwError } = await supabase.auth.signInWithPassword({ email, password });
+        const { data: pwData, error: pwError } = await supabase.auth.signInWithPassword({ email, password });
         if (pwError) throw pwError;
         if (target) {
-          redirectTo(target);
+          redirectWithSession(target, pwData.session);
         } else {
           // Signed in but nowhere to go — show a success state
           setMagicSent(true); // re-use the "check your email" slot with a different message
